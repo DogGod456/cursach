@@ -4,6 +4,8 @@ import (
 	"context"
 	"cursach/internal/pkg/auth"
 	"cursach/internal/repository"
+	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -15,46 +17,71 @@ const (
 	UserRoleKey contextKey = "user_role"
 )
 
-func JWTAuthMiddleware(secret string, tokenRepo repository.TokenRepository) func(http.Handler) http.Handler {
+func JWTAuthMiddleware(secret string, tokenRepo repository.TokenRepository) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("Processing request: %s %s", r.Method, r.URL.Path)
+			// Для WebSocket проверяем token в query-параметре
+			if strings.HasPrefix(r.URL.Path, "/api/ws/") {
+				token := r.URL.Query().Get("token")
+				if token == "" {
+					http.Error(w, "Token required", http.StatusUnauthorized)
+					return
+				}
+
+				// Проверка отозван ли токен
+				revoked, err := tokenRepo.IsTokenRevoked(r.Context(), token)
+				if err != nil || revoked {
+					http.Error(w, "Token revoked", http.StatusUnauthorized)
+					return
+				}
+
+				// Валидация токена
+				claims, err := auth.ValidateToken(token, secret)
+				if err != nil {
+					http.Error(w, "Invalid token", http.StatusUnauthorized)
+					return
+				}
+
+				// Добавляем claims в контекст
+				ctx := context.WithValue(r.Context(), "user_id", claims.UserID)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+
+			// Стандартная проверка для других запросов
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				http.Error(w, "Authorization header is required", http.StatusUnauthorized)
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
 				return
 			}
 
-			tokenParts := strings.Split(authHeader, " ")
-			if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-				http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
+			splitToken := strings.Split(authHeader, "Bearer ")
+			if len(splitToken) != 2 {
+				http.Error(w, "Invalid token format", http.StatusUnauthorized)
 				return
 			}
 
-			token := tokenParts[1]
+			tokenString := splitToken[1]
 
-			// Проверяем, не отозван ли токен
-			revoked, err := tokenRepo.IsTokenRevoked(r.Context(), token)
-			if err != nil {
-				http.Error(w, "Failed to check token status", http.StatusInternalServerError)
-				return
-			}
-			if revoked {
-				http.Error(w, "Token has been revoked", http.StatusUnauthorized)
+			// Проверка отозван ли токен
+			revoked, err := tokenRepo.IsTokenRevoked(r.Context(), tokenString)
+			if err != nil || revoked {
+				http.Error(w, "Token revoked", http.StatusUnauthorized)
 				return
 			}
 
-			claims, err := auth.ParseJWT(token, secret)
+			// Валидация токена
+			claims, err := auth.ValidateToken(tokenString, secret)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
 			}
 
-			// Добавляем данные пользователя в контекст
-			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-			ctx = context.WithValue(ctx, UserRoleKey, claims.Role)
-			r = r.WithContext(ctx)
-
-			next.ServeHTTP(w, r)
+			log.Printf("Authenticated user: %s", claims.UserID)
+			// Добавляем claims в контекст
+			ctx := context.WithValue(r.Context(), "user_id", claims.UserID)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

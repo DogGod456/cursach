@@ -46,3 +46,8 @@ func ParseJWT(tokenString, secret string) (*Claims, error) {
 
 	return nil, ErrInvalidToken
 }
+
+// ValidateToken проверяет JWT токен и возвращает claims
+func ValidateToken(tokenString, secret string) (*Claims, error) {
+	return ParseJWT(tokenString, secret)
+}

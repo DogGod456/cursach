@@ -28,6 +28,7 @@ func SetupRouter(
 	tokenRepo repository.TokenRepository,
 	logoutUC *userusecase.Logouter,
 	loginUpdater *userusecase.LoginUpdater,
+	wsHandler *chathandler.WSHandler,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -47,6 +48,7 @@ func SetupRouter(
 	protected.Handle("/users/{user_id}", userhandler.NewDeleteHandler(userDeleter)).Methods("DELETE")
 	protected.Handle("/logout", logoutHandler).Methods("POST")
 	protected.Handle("/users/login", userhandler.NewUpdateLoginHandler(loginUpdater)).Methods("PUT")
+	protected.HandleFunc("/ws/{chat_id}", wsHandler.Handle)
 
 	return r
 }

@@ -4,9 +4,11 @@ import (
 	"cursach/internal/config"
 	"cursach/internal/database"
 	"cursach/internal/handlers"
+	wbs "cursach/internal/handlers/chat"
 	"cursach/internal/repository"
 	"cursach/internal/server"
 	"cursach/internal/usecase/chat"
+	"cursach/internal/usecase/message"
 	"cursach/internal/usecase/user"
 	"github.com/joho/godotenv"
 	"log"
@@ -47,6 +49,7 @@ func main() {
 	chatRepo := repository.NewChatRepository(db.DB)
 	userRepo := repository.NewUserRepository(db.DB)
 	tokenRepo := repository.NewTokenRepository(db.DB)
+	messageRepo := repository.NewMessageRepository(db.DB)
 
 	// Конфигурация аутентификации
 	salt := cfg.Auth.Salt
@@ -60,6 +63,16 @@ func main() {
 	authUC := user.NewAuthenticator(userRepo, salt)
 	logoutUC := user.NewLogouter(tokenRepo)
 	loginUpdater := user.NewLoginUpdater(userRepo)
+	messageUC := message.NewSender(chatRepo, messageRepo)
+
+	// WebSocket Handler
+	wsHandler := wbs.NewWSHandler(
+		jwtSecret,
+		tokenRepo,
+		chatRepo,
+		messageRepo,
+		messageUC,
+	)
 
 	// Настройка маршрутов
 	router := handlers.SetupRouter(
@@ -72,6 +85,7 @@ func main() {
 		tokenRepo,
 		logoutUC,
 		loginUpdater,
+		wsHandler,
 	)
 
 	// Запуск сервера

@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS messages (
     id_chat UUID NOT NULL,
     id_user UUID NOT NULL,  -- отправитель
     message_text TEXT NOT NULL,
-    id_reply_message UUID,  -- ответ на сообщение
-    draft BOOLEAN NOT NULL DEFAULT FALSE,
+    id_reply_message UUID,  -- ответ на сообщение ЭТОГО НЕ БУДЕТ
+    draft BOOLEAN NOT NULL DEFAULT FALSE, -- ЭТОГО ТОЖЕ
     sending_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ
 );
