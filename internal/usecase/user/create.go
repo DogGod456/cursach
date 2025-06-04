@@ -2,7 +2,7 @@ package user
 
 import (
 	"context"
-	_ "cursach/internal/models"
+	"cursach/internal/pkg/auth"
 	"cursach/internal/repository"
 	"errors"
 	"fmt"
@@ -17,16 +17,27 @@ var (
 // UserManager определяет интерфейс для управления пользователями
 type UserManager struct {
 	userRepo repository.UserRepository
+	salt     string
 }
 
 // NewUserManager создает новый экземпляр UserManager
-func NewUserManager(userRepo repository.UserRepository) *UserManager {
-	return &UserManager{userRepo: userRepo}
+func NewUserManager(userRepo repository.UserRepository, salt string) *UserManager {
+	return &UserManager{
+		userRepo: userRepo,
+		salt:     salt,
+	}
 }
 
 // CreateOrGetUser создает нового пользователя или возвращает существующего
-// При создании проверяет уникальность логина
-// При получении проверяет пароль
+// При создании:
+//   - Проверяет уникальность логина
+//   - Валидирует роль
+//   - Хеширует пароль с использованием соли
+//
+// При получении:
+//   - Проверяет пароль с помощью верификации хеша
+//
+// Возвращает идентификатор пользователя или ошибку
 func (uc *UserManager) CreateOrGetUser(ctx context.Context, login, password, role string) (string, error) {
 	// Валидация входных данных
 	if login == "" || password == "" {
@@ -34,18 +45,17 @@ func (uc *UserManager) CreateOrGetUser(ctx context.Context, login, password, rol
 	}
 
 	// Пытаемся получить существующего пользователя
-	user, err := uc.userRepo.GetUserByLogin(ctx, login)
+	existingUser, err := uc.userRepo.GetUserByLogin(ctx, login)
 	if err != nil {
 		return "", fmt.Errorf("failed to get user: %w", err)
 	}
 
 	// Если пользователь существует - проверяем пароль
-	if user != nil {
-		// Здесь должна быть реальная проверка хеша пароля
-		if user.Password != password {
+	if existingUser != nil {
+		if !auth.VerifyPassword(password, uc.salt, existingUser.Password) {
 			return "", ErrInvalidCredentials
 		}
-		return user.ID, nil
+		return existingUser.ID, nil
 	}
 
 	// Если пользователя нет - создаем нового
@@ -53,7 +63,13 @@ func (uc *UserManager) CreateOrGetUser(ctx context.Context, login, password, rol
 		return "", ErrInvalidRole
 	}
 
-	userID, err := uc.userRepo.CreateUser(ctx, login, password, role)
+	// Хешируем пароль перед сохранением
+	hashedPassword, err := auth.HashPassword(password, uc.salt)
+	if err != nil {
+		return "", fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	userID, err := uc.userRepo.CreateUser(ctx, login, hashedPassword, role)
 	if err != nil {
 		return "", fmt.Errorf("failed to create user: %w", err)
 	}

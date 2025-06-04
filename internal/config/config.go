@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -14,6 +15,7 @@ var (
 
 type Config struct {
 	Database DatabaseConfig
+	Auth     AuthConfig
 }
 
 type DatabaseConfig struct {
@@ -23,6 +25,12 @@ type DatabaseConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
+}
+
+type AuthConfig struct {
+	Salt      string
+	JWTSecret string
+	JWTExpiry time.Duration
 }
 
 func LoadConfig() (*Config, error) {
@@ -70,6 +78,16 @@ func LoadConfig() (*Config, error) {
 		fmt.Println("WARNING: SSL is disabled - not recommended for production!")
 	}
 
+	salt := os.Getenv("AUTH_SALT")
+	if salt == "" {
+		return nil, fmt.Errorf("AUTH_SALT is not set")
+	}
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		return nil, fmt.Errorf("JWT_SECRET is not set")
+	}
+
 	return &Config{
 		Database: DatabaseConfig{
 			Host:     host,
@@ -78,6 +96,11 @@ func LoadConfig() (*Config, error) {
 			Password: password,
 			DBName:   dbName,
 			SSLMode:  sslMode,
+		},
+		Auth: AuthConfig{
+			Salt:      salt,
+			JWTSecret: jwtSecret,
+			JWTExpiry: 24 * time.Hour,
 		},
 	}, nil
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cursach/internal/config"
+
 	_ "github.com/lib/pq"
 )
 
@@ -19,7 +20,7 @@ type DB struct {
 // New создает новое подключение к PostgreSQL
 // Принимает конфигурацию и возвращает *DB или ошибку
 func New(cfg config.DatabaseConfig) (*DB, error) {
-	// Формируем строку подключения из параметров конфигурации
+	// Формируем строку подключения
 	connStr := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,
@@ -30,18 +31,15 @@ func New(cfg config.DatabaseConfig) (*DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
-	// Если будут траблы с БД и количеством подключений, то тут надо увеличить
-	// Настраиваем пул соединений:
-	// Максимальное количество открытых соединений
+
+	// Настраиваем пул соединений
 	db.SetMaxOpenConns(25)
-	// Максимальное количество бездействующих соединений в пуле
 	db.SetMaxIdleConns(5)
-	// Максимальное время жизни соединения
 	db.SetConnMaxLifetime(5 * time.Minute)
 
 	// Проверяем соединение с таймаутом 5 секунд
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel() // Гарантируем освобождение ресурсов контекста
+	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -51,8 +49,7 @@ func New(cfg config.DatabaseConfig) (*DB, error) {
 	return &DB{db}, nil
 }
 
-// InitSchema инициализирует схему базы данных (создает таблицы)
-// Использует таймаут 10 секунд для выполнения SQL-скрипта
+// InitSchema инициализирует схему базы данных
 func (db *DB) InitSchema() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -64,5 +61,14 @@ func (db *DB) InitSchema() error {
 	}
 
 	log.Println("Database schema initialized")
+	return nil
+}
+
+// Close закрывает соединение с базой данных
+func (db *DB) Close() error {
+	if err := db.DB.Close(); err != nil {
+		return fmt.Errorf("failed to close database connection: %w", err)
+	}
+	log.Println("Database connection closed")
 	return nil
 }

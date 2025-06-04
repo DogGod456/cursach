@@ -1,5 +1,77 @@
 package main
 
-func main() {
+import (
+	"cursach/internal/config"
+	"cursach/internal/database"
+	"cursach/internal/handlers"
+	"cursach/internal/repository"
+	"cursach/internal/server"
+	"cursach/internal/usecase/chat"
+	"cursach/internal/usecase/user"
+	"github.com/joho/godotenv"
+	"log"
+)
 
+func main() {
+	// Загружаем .env файл перед запуском приложения
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file: ", err)
+	}
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// Подключение к базе данных
+	db, err := database.New(cfg.Database)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	defer func(db *database.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatalf("Failed to close database connection: %v", err)
+		}
+	}(db)
+
+	log.Println("Database connection established")
+
+	// Инициализация схемы БД
+	if err := db.InitSchema(); err != nil {
+		log.Printf("Warning: schema initialization: %v", err)
+	}
+
+	// Инициализация репозиториев
+	chatRepo := repository.NewChatRepository(db.DB)
+	userRepo := repository.NewUserRepository(db.DB)
+	tokenRepo := repository.NewTokenRepository(db.DB)
+
+	// Конфигурация аутентификации
+	salt := cfg.Auth.Salt
+	jwtSecret := cfg.Auth.JWTSecret
+
+	// Инициализация use cases
+	chatCreator := chat.NewChatCreator(chatRepo, userRepo)
+	chatDeleter := chat.NewChatDeleter(chatRepo)
+	userManager := user.NewUserManager(userRepo, salt)
+	userDeleter := user.NewUserDeleter(userRepo)
+	authUC := user.NewAuthenticator(userRepo, salt)
+	logoutUC := user.NewLogouter(tokenRepo)
+
+	// Настройка маршрутов
+	router := handlers.SetupRouter(
+		chatCreator,
+		chatDeleter,
+		userManager,
+		userDeleter,
+		authUC,
+		jwtSecret,
+		tokenRepo,
+		logoutUC,
+	)
+
+	// Запуск сервера
+	server.Start(router, ":8080")
 }

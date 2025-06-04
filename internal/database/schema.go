@@ -41,12 +41,20 @@ CREATE TABLE IF NOT EXISTS messages (
     updated_at TIMESTAMPTZ
 );
 
+-- Таблица для отозванных токенов
+CREATE TABLE IF NOT EXISTS revoked_tokens (
+    id_revoked_token UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    token TEXT NOT NULL UNIQUE,
+    revoked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Индексы
 CREATE INDEX idx_chat_users_chat ON chat_users(id_chat);
 CREATE INDEX idx_chat_users_user ON chat_users(id_user);
 CREATE INDEX idx_messages_chat ON messages(id_chat);
 CREATE INDEX idx_messages_sender ON messages(id_user);
 CREATE INDEX idx_messages_time ON messages(sending_time);
+CREATE INDEX idx_revoked_tokens_token ON revoked_tokens(token);
 
 -- Внешние ключи (все связи описаны после создания таблиц)
 ALTER TABLE chat_users 
