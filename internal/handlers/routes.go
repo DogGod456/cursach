@@ -27,6 +27,7 @@ func SetupRouter(
 	jwtSecret string,
 	tokenRepo repository.TokenRepository,
 	logoutUC *userusecase.Logouter,
+	loginUpdater *userusecase.LoginUpdater,
 ) *mux.Router {
 	r := mux.NewRouter()
 
@@ -45,6 +46,7 @@ func SetupRouter(
 	protected.Handle("/chats/{chat_id}", chathandler.NewDeleteHandler(chatDeleter)).Methods("DELETE")
 	protected.Handle("/users/{user_id}", userhandler.NewDeleteHandler(userDeleter)).Methods("DELETE")
 	protected.Handle("/logout", logoutHandler).Methods("POST")
+	protected.Handle("/users/login", userhandler.NewUpdateLoginHandler(loginUpdater)).Methods("PUT")
 
 	return r
 }

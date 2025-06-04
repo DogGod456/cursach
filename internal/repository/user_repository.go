@@ -30,6 +30,9 @@ type UserRepository interface {
 
 	// LoginExists проверяет существование пользователя по логину
 	LoginExists(ctx context.Context, login string) (bool, error)
+
+	// UpdateLogin обновляет логин пользователя
+	UpdateLogin(ctx context.Context, userID, newLogin string) error
 }
 
 // userRepository реализует интерфейс UserRepository
@@ -160,4 +163,20 @@ func (r *userRepository) LoginExists(ctx context.Context, login string) (bool, e
 		return false, fmt.Errorf("failed to check login existence: %w", err)
 	}
 	return exists, nil
+}
+
+// UpdateLogin обновляет логин пользователя
+func (r *userRepository) UpdateLogin(ctx context.Context, userID, newLogin string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE users 
+		SET login = $1, updated_at = NOW()
+		WHERE id_user = $2`,
+		newLogin,
+		userID,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update user login: %w", err)
+	}
+	return nil
 }

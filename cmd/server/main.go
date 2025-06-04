@@ -59,6 +59,7 @@ func main() {
 	userDeleter := user.NewUserDeleter(userRepo)
 	authUC := user.NewAuthenticator(userRepo, salt)
 	logoutUC := user.NewLogouter(tokenRepo)
+	loginUpdater := user.NewLoginUpdater(userRepo)
 
 	// Настройка маршрутов
 	router := handlers.SetupRouter(
@@ -70,6 +71,7 @@ func main() {
 		jwtSecret,
 		tokenRepo,
 		logoutUC,
+		loginUpdater,
 	)
 
 	// Запуск сервера
