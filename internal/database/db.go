@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/lib/pq"
 	"log"
 	"time"
 
@@ -20,6 +21,20 @@ type DB struct {
 // New создает новое подключение к PostgreSQL
 // Принимает конфигурацию и возвращает *DB или ошибку
 func New(cfg config.DatabaseConfig) (*DB, error) {
+	// Сначала проверяем существование базы данных
+	exists, err := databaseExists(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check database existence: %w", err)
+	}
+
+	// Если базы не существует - создаем
+	if !exists {
+		log.Printf("Database %s does not exist, creating...", cfg.DBName)
+		if err := createDatabase(cfg); err != nil {
+			return nil, fmt.Errorf("failed to create database: %w", err)
+		}
+	}
+
 	// Формируем строку подключения
 	connStr := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
@@ -70,5 +85,72 @@ func (db *DB) Close() error {
 		return fmt.Errorf("failed to close database connection: %w", err)
 	}
 	log.Println("Database connection closed")
+	return nil
+}
+
+// databaseExists проверяет существование базы данных
+func databaseExists(cfg config.DatabaseConfig) (bool, error) {
+	// Подключаемся к системной базе данных
+	sysConnStr := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.SSLMode,
+	)
+
+	sysDB, err := sql.Open("postgres", sysConnStr)
+	if err != nil {
+		return false, fmt.Errorf("failed to open system database: %w", err)
+	}
+	defer sysDB.Close()
+
+	// Проверяем соединение
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := sysDB.PingContext(ctx); err != nil {
+		return false, fmt.Errorf("failed to ping system database: %w", err)
+	}
+
+	// Проверяем существование базы
+	query := `SELECT 1 FROM pg_database WHERE datname = $1`
+	var exists int
+	err = sysDB.QueryRowContext(ctx, query, cfg.DBName).Scan(&exists)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("database check failed: %w", err)
+	default:
+		return true, nil
+	}
+}
+
+// createDatabase создает новую базу данных
+func createDatabase(cfg config.DatabaseConfig) error {
+	// Подключаемся к системной базе данных
+	sysConnStr := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.SSLMode,
+	)
+
+	sysDB, err := sql.Open("postgres", sysConnStr)
+	if err != nil {
+		return fmt.Errorf("failed to open system database: %w", err)
+	}
+	defer sysDB.Close()
+
+	// Проверяем соединение
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := sysDB.PingContext(ctx); err != nil {
+		return fmt.Errorf("failed to ping system database: %w", err)
+	}
+
+	// Создаем базу данных с экранированием имени
+	query := fmt.Sprintf("CREATE DATABASE %s", pq.QuoteIdentifier(cfg.DBName))
+	_, err = sysDB.ExecContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to create database: %w", err)
+	}
+
 	return nil
 }
