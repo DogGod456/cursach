@@ -1,13 +1,231 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head><meta charset="UTF-8"><title>Изменить имя</title></head>
+<html lang="ru" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Изменение имени пользователя</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --error: #ef4444;
+      --success: #10b981;
+      --text: #1f2937;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      padding: 40px;
+      transition: all 0.3s ease;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      position: relative;
+    }
+
+    .back-btn {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 8px;
+    }
+
+    .back-btn svg {
+      margin-right: 6px;
+    }
+
+    .logo-icon {
+      display: inline-flex;
+      background: var(--primary);
+      color: white;
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -2px rgba(79, 70, 229, 0.2);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #111827;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #6b7280;
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 16px;
+      transition: all 0.2s;
+      background-color: #f9fafb;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+      background-color: white;
+    }
+
+    input::placeholder {
+      color: #9ca3af;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3), 0 2px 4px -2px rgba(79, 70, 229, 0.3);
+    }
+
+    button[type="submit"]:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3), 0 4px 6px -4px rgba(79, 70, 229, 0.3);
+    }
+
+    button[type="submit"]:active {
+      transform: translateY(0);
+    }
+
+    #result {
+      min-height: 24px;
+      text-align: center;
+      margin-top: 20px;
+      font-weight: 500;
+      padding: 12px 16px;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+
+    .error {
+      background-color: #fee2e2;
+      color: var(--error);
+    }
+
+    .success {
+      background-color: #d1fae5;
+      color: var(--success);
+    }
+
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid var(--primary);
+      padding: 16px;
+      border-radius: 4px;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+  </style>
+</head>
 <body>
-<h1>Изменить имя пользователя</h1>
-<form id="editLoginForm">
-  <input id="new_login" type="text" placeholder="Новое имя" required>
-  <button type="submit">Подтвердить</button>
-</form>
-<div id="result"></div>
+<div class="container">
+  <div class="card">
+    <div class="header">
+      <button class="back-btn" onclick="window.location.href='/contacts.html'">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+        </svg>
+        Назад
+      </button>
+      <div class="logo-icon">👤</div>
+      <h1>Изменение имени</h1>
+      <p class="subtitle">Введите новое имя пользователя</p>
+    </div>
+
+    <div class="info-box">
+      После изменения имени вам потребуется использовать новое имя для входа в систему.
+    </div>
+
+    <form id="editLoginForm">
+      <div class="form-group">
+        <label for="new_login">Новое имя пользователя</label>
+        <input
+                id="new_login"
+                type="text"
+                placeholder="Введите новое имя"
+                required
+                autocomplete="username"
+                autofocus
+        />
+      </div>
+
+      <button type="submit">Сохранить изменения</button>
+    </form>
+
+    <div id="result"></div>
+  </div>
+</div>
 
 <script>
   const token = localStorage.getItem('token');
@@ -15,7 +233,12 @@
 
   document.getElementById('editLoginForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const new_login = e.target.new_login.value;
+    const new_login = document.getElementById('new_login').value.trim();
+    const resultDiv = document.getElementById('result');
+
+    // Очистка предыдущих сообщений
+    resultDiv.textContent = '';
+    resultDiv.className = '';
 
     try {
       const res = await fetch('/api/users/login', {
@@ -26,11 +249,22 @@
         },
         body: JSON.stringify({ new_login: new_login })
       });
-      if (!res.ok) throw new Error('Ошибка изменения имени');
-      document.getElementById('result').textContent = 'Имя изменено';
-      setTimeout(() => window.location.href = '/contacts.html', 1000);
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Ошибка изменения имени');
+      }
+
+      resultDiv.textContent = 'Имя успешно изменено! Перенаправляем...';
+      resultDiv.classList.add('success');
+
+      setTimeout(() => {
+        window.location.href = '/contacts.html';
+      }, 1500);
+
     } catch (err) {
-      document.getElementById('result').textContent = err.message;
+      resultDiv.textContent = err.message;
+      resultDiv.classList.add('error');
     }
   });
 </script>

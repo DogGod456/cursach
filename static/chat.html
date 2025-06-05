@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Чат</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+      --text: #1f2937;
+      --text-light: #6b7280;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --success: #10b981;
+      --message-bg: #e0e7ff;
+      --own-message-bg: #d1fae5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+      color: var(--text);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 1400px;
+      height: 90vh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      background: var(--card);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    /* Chat header */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      padding: 20px;
+      background: var(--primary);
+      color: white;
+      box-shadow: var(--shadow);
+      z-index: 10;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      margin-right: 15px;
+      padding: 8px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateX(-3px);
+    }
+
+    .chat-info {
+      flex-grow: 1;
+    }
+
+    .chat-title {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    /* Messages area */
+    .messages-container {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f9fafb"/><path d="M0 50 L100 50 M50 0 L50 100" stroke="%23e5e7eb" stroke-width="0.5"/></svg>');
+      background-size: 40px 40px;
+    }
+
+    .message {
+      max-width: 70%;
+      margin-bottom: 20px;
+      padding: 15px;
+      border-radius: 18px;
+      background: var(--message-bg);
+      position: relative;
+      animation: fadeIn 0.3s ease-out;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .own-message {
+      background: var(--own-message-bg);
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .other-message {
+      border-bottom-left-radius: 4px;
+    }
+
+    .avatar {
+      min-width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #8b5cf6);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .message-content {
+      flex-grow: 1;
+    }
+
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .message-sender {
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .message-time {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-left: 10px;
+    }
+
+    .message-text {
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    /* Input area */
+    .input-container {
+      padding: 20px;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+    }
+
+    .message-input {
+      flex-grow: 1;
+      padding: 16px 20px;
+      border-radius: 30px;
+      border: 2px solid var(--border);
+      font-size: 16px;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    .message-input:focus {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .send-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: var(--shadow);
+    }
+
+    .send-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .send-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Scrollbar styling */
+    .messages-container::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .messages-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb {
+      background: #c7d2fe;
+      border-radius: 4px;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb:hover {
+      background: var(--primary-light);
+    }
+
+    /* Date separator */
+    .date-separator {
+      text-align: center;
+      margin: 20px 0;
+      position: relative;
+      font-size: 14px;
+      color: var(--text-light);
+    }
+
+    .date-separator::before,
+    .date-separator::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .date-separator::before {
+      left: 0;
+    }
+
+    .date-separator::after {
+      right: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .chat-container {
+        border-radius: 0;
+        height: 100vh;
+        max-width: 100%;
+      }
+
+      .message {
+        max-width: 90%;
+      }
+
+      .chat-header {
+        padding: 15px;
+      }
+
+      .chat-title {
+        font-size: 18px;
+      }
+
+      .input-container {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="chat-container">
+  <!-- Chat header -->
+  <div class="chat-header">
+    <button class="back-btn" id="backBtn">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+    <div class="chat-info">
+      <h1 class="chat-title" id="chatTitle">Загрузка...</h1>
+    </div>
+  </div>
+
+  <!-- Messages container -->
+  <div class="messages-container" id="messages"></div>
+
+  <!-- Input area -->
+  <div class="input-container">
+    <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
+    <button class="send-btn" id="sendBtn">
+      <i class="fas fa-paper-plane"></i>
+    </button>
+  </div>
+</div>
+
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) {
+    window.location.href = '/login.html';
+  }
+
+  // Получаем ID чата из URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const chatId = urlParams.get('chat_id');
+
+  if (!chatId) {
+    window.location.href = '/contacts.html';
+  }
+
+  // Элементы интерфейса
+  const backBtn = document.getElementById('backBtn');
+  const chatTitle = document.getElementById('chatTitle');
+  const messagesContainer = document.getElementById('messages');
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  // Подключение к WebSocket
+  let ws;
+  let userId = localStorage.getItem('user_id');
+  let lastDate = null;
+
+  // Навигация
+  backBtn.onclick = () => {
+    window.location.href = '/contacts.html';
+  };
+
+  // Инициализация чата
+  function initChat() {
+    // Подключение к WebSocket
+    connectWebSocket();
+  }
+
+  // Подключение к WebSocket
+  function connectWebSocket() {
+    const protocol = window.location.protocol === 'http:' ? 'ws:' : 'wss:';
+    const host = window.location.host;
+
+    ws = new WebSocket(`${protocol}//${host}/ws/${chatId}?token=${token}`);
+
+    ws.onopen = () => {
+      console.log('WebSocket connection established');
+      // Запрашиваем историю сообщений после подключения
+      ws.send(JSON.stringify({type: "get_history"}));
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      switch (data.type) {
+        case "history":
+          // Обработка истории сообщений
+          data.messages.forEach(msg => addMessageToUI(msg));
+          break;
+        case "chat_info":
+          // Обновление информации о чате
+          chatTitle.textContent = `Чат с ${data.name}`;
+          break;
+        case "message":
+          // Новое сообщение
+          addMessageToUI(data.message);
+          break;
+        case "error":
+          console.error('WebSocket error:', data.message);
+          break;
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      // Попытка переподключения через 5 секунд
+      setTimeout(connectWebSocket, 5000);
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+  }
+
+  // Отправка сообщения
+  sendBtn.onclick = () => {
+    sendMessage();
+  };
+
+  // Функция отправки сообщения
+  function sendMessage() {
+    const text = messageInput.value.trim();
+    if (text) {
+      const message = {
+        type: "message",
+        text: text
+      };
+
+      // Отправка через WebSocket
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(message));
+        messageInput.value = '';
+      } else {
+        console.error('WebSocket not connected');
+      }
+    }
+  }
+
+  // Обработка нажатия Enter
+  messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  });
+
+  // Добавление сообщения в UI
+  function addMessageToUI(message) {
+    // Определяем, наше ли это сообщение
+    const isOwnMessage = message.user_id == userId;
+
+    // Проверяем, нужно ли добавить разделитель даты
+    const messageDate = new Date(message.sending_time);
+    const messageDateStr = messageDate.toLocaleDateString();
+
+    if (lastDate !== messageDateStr) {
+      const dateSeparator = document.createElement('div');
+      dateSeparator.className = 'date-separator';
+      dateSeparator.textContent = messageDateStr;
+      messagesContainer.appendChild(dateSeparator);
+      lastDate = messageDateStr;
+    }
+
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message');
+    messageDiv.classList.add(isOwnMessage ? 'own-message' : 'other-message');
+
+    // Генерируем аватар на основе имени пользователя
+    const avatarInitial = message.login ? message.login.charAt(0).toUpperCase() : '?';
+
+    messageDiv.innerHTML = `
+      <div class="avatar">${avatarInitial}</div>
+      <div class="message-content">
+        <div class="message-header">
+          <div class="message-sender">${message.login || 'Аноним'}</div>
+          <div class="message-time">${formatTime(message.sending_time)}</div>
+        </div>
+        <div class="message-text">${message.text}</div>
+      </div>
+    `;
+
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  // Форматирование времени
+  function formatTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }
+
+  // Запуск инициализации
+  initChat();
+</script>
+</body>
+</html>

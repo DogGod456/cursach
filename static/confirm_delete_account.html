@@ -1,16 +1,246 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head><meta charset="UTF-8"><title>Удалить аккаунт</title></head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Удалить аккаунт</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --text: #1f2937;
+            --light-text: #6b7280;
+            --bg: #f9fafb;
+            --card: #ffffff;
+            --border: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .confirmation-card {
+            background: var(--card);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: 40px 30px;
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+            border: 2px solid #fee2e2;
+        }
+
+        .warning-icon {
+            font-size: 72px;
+            color: var(--danger);
+            margin-bottom: 25px;
+            animation: shake 1.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        .confirmation-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--danger);
+            margin-bottom: 20px;
+        }
+
+        .confirmation-text {
+            font-size: 18px;
+            color: var(--text);
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+
+        .warning-list {
+            text-align: left;
+            background: #fef2f2;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid var(--danger);
+        }
+
+        .warning-list li {
+            margin-bottom: 10px;
+            padding-left: 10px;
+        }
+
+        .warning-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        .final-warning {
+            font-weight: 700;
+            color: var(--danger);
+            font-size: 20px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff7ed;
+            border-radius: 10px;
+            border: 1px dashed var(--danger);
+        }
+
+        .buttons-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 35px;
+            border-radius: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            box-shadow: var(--shadow);
+            font-size: 18px;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px -3px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-outline:hover {
+            background: #f3f4f6;
+            transform: translateY(-3px);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translateX(-2px); }
+            20%, 80% { transform: translateX(4px); }
+            30%, 50%, 70% { transform: translateX(-6px); }
+            40%, 60% { transform: translateX(6px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .confirmation-card {
+                padding: 30px 20px;
+            }
+
+            .confirmation-title {
+                font-size: 26px;
+            }
+
+            .confirmation-text {
+                font-size: 16px;
+            }
+
+            .final-warning {
+                font-size: 18px;
+            }
+
+            .buttons-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
 <body>
-<h1>Удалить аккаунт?</h1>
-<button id="yesBtn">ДА</button>
-<button id="noBtn">НЕТ</button>
+<div class="container">
+    <div class="confirmation-card">
+        <div class="warning-icon">
+            <i class="fas fa-radiation"></i>
+        </div>
+
+        <h1 class="confirmation-title">УДАЛИТЬ АККАУНТ?</h1>
+
+        <p class="confirmation-text">
+            Вы собираетесь навсегда удалить свой аккаунт и все связанные с ним данные.
+        </p>
+
+        <div class="warning-list">
+            <p><strong>Это действие приведёт к:</strong></p>
+            <ul>
+                <li>Безвозвратному удалению всех ваших чатов и сообщений</li>
+                <li>Удалению вашего профиля и личных данных</li>
+                <li>Потере доступа к сервису</li>
+                <li>Невозможности восстановления аккаунта</li>
+            </ul>
+        </div>
+
+        <div class="final-warning">
+            <i class="fas fa-exclamation-circle"></i> ЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ!
+        </div>
+
+        <div class="buttons-container">
+            <button class="btn btn-danger" id="yesBtn">
+                <i class="fas fa-skull"></i> ДА, УДАЛИТЬ АККАУНТ
+            </button>
+            <button class="btn btn-outline" id="noBtn">
+                <i class="fas fa-times-circle"></i> ОТМЕНИТЬ
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
     const token = localStorage.getItem('token');
     if (!token) window.location.href = '/login.html';
 
     document.getElementById('yesBtn').onclick = async () => {
+        const yesBtn = document.getElementById('yesBtn');
+        const originalText = yesBtn.innerHTML;
+
+        // Показать индикатор загрузки
+        yesBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Удаление аккаунта...';
+        yesBtn.disabled = true;
+
         try {
             const response = await fetch('/api/users/me', {
                 method: 'DELETE',
@@ -26,6 +256,8 @@
             window.location.href = '/login.html';
         } catch (error) {
             alert(error.message);
+            yesBtn.innerHTML = originalText;
+            yesBtn.disabled = false;
         }
     };
 

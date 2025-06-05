@@ -40,9 +40,15 @@ func (uc *Sender) Execute(ctx context.Context, chatID, userID, text string) (*mo
 		Text:   text,
 	}
 
-	if err := uc.messageRepo.Create(ctx, msg); err != nil {
+	// Исправлено: добавлено получение ID созданного сообщения
+	messageID, err := uc.messageRepo.Create(ctx, msg)
+	if err != nil {
 		return nil, err
 	}
 
+	// Устанавливаем ID сообщения
+	msg.ID = messageID
+
+	// Возвращаем полную модель сообщения
 	return msg, nil
 }

@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"cursach/internal/models"
 	"cursach/internal/pkg/auth"
 	"cursach/internal/repository"
 	"cursach/internal/usecase/message"
@@ -36,6 +35,7 @@ type WSHandler struct {
 	jwtSecret   string
 	tokenRepo   repository.TokenRepository
 	chatRepo    repository.ChatRepository
+	userRepo    repository.UserRepository // Добавлен UserRepository
 	messageRepo repository.MessageRepository
 	messageUC   *message.Sender
 	connections map[string]map[*websocket.Conn]bool // chatID -> connections
@@ -46,6 +46,7 @@ func NewWSHandler(
 	jwtSecret string,
 	tokenRepo repository.TokenRepository,
 	chatRepo repository.ChatRepository,
+	userRepo repository.UserRepository, // Добавлен UserRepository
 	messageRepo repository.MessageRepository,
 	messageUC *message.Sender,
 ) *WSHandler {
@@ -53,6 +54,7 @@ func NewWSHandler(
 		jwtSecret:   jwtSecret,
 		tokenRepo:   tokenRepo,
 		chatRepo:    chatRepo,
+		userRepo:    userRepo,
 		messageRepo: messageRepo,
 		messageUC:   messageUC,
 		connections: make(map[string]map[*websocket.Conn]bool),
@@ -60,7 +62,9 @@ func NewWSHandler(
 }
 
 func (h *WSHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	log.Println("WebSocket connection requested")
 	conn, err := upgrader.Upgrade(w, r, nil)
+	log.Println("conn", conn)
 	if err != nil {
 		log.Printf("WebSocket upgrade failed: %v", err)
 		return
@@ -95,7 +99,10 @@ func (h *WSHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	// Запускаем горутину для отправки пингов
 	go h.keepAlive(conn)
 
-	// Загрузка истории сообщений
+	// Отправляем информацию о чате
+	h.sendChatInfo(conn, chatID, claims.UserID)
+
+	// Загружаем и отправляем историю сообщений
 	if err := h.sendHistory(conn, chatID); err != nil {
 		log.Printf("Failed to send history: %v", err)
 	}
@@ -164,17 +171,51 @@ func (h *WSHandler) keepAlive(conn *websocket.Conn) {
 	}
 }
 
+func (h *WSHandler) sendChatInfo(conn *websocket.Conn, chatID, userID string) {
+	// Получаем пользователей чата
+	users, err := h.chatRepo.GetChatUsers(context.Background(), chatID)
+	if err != nil {
+		log.Printf("Failed to get chat users: %v", err)
+		conn.WriteJSON(map[string]interface{}{
+			"type":    "error",
+			"message": "Failed to get chat info",
+		})
+		return
+	}
+
+	// Находим собеседника (исключая текущего пользователя)
+	var interlocutorName string
+	for _, user := range users {
+		if user.ID != userID {
+			interlocutorName = user.Login
+			break
+		}
+	}
+
+	if interlocutorName == "" {
+		interlocutorName = "Unknown"
+	}
+
+	// Отправляем информацию о чате
+	conn.WriteJSON(map[string]interface{}{
+		"type": "chat_info",
+		"name": interlocutorName,
+	})
+}
+
 func (h *WSHandler) sendHistory(conn *websocket.Conn, chatID string) error {
-	messages, err := h.messageRepo.GetByChat(context.Background(), chatID, 50)
+	// Получаем историю сообщений
+	messages, err := h.messageRepo.GetByChat(context.Background(), chatID, 500)
 	if err != nil {
 		return err
 	}
 
-	for _, msg := range messages {
-		if err := conn.WriteJSON(msg); err != nil {
-			return err
-		}
-	}
+	// Отправляем историю
+	conn.WriteJSON(map[string]interface{}{
+		"type":     "history",
+		"messages": messages,
+	})
+
 	return nil
 }
 
@@ -195,23 +236,64 @@ func (h *WSHandler) handleMessages(conn *websocket.Conn, chatID, userID string) 
 			break
 		}
 
-		var input struct{ Text string }
+		var input struct {
+			Type string `json:"type"`
+			Text string `json:"text,omitempty"`
+		}
+
 		if err := json.Unmarshal(msgBytes, &input); err != nil {
 			log.Printf("Invalid message format: %v", err)
+			conn.WriteJSON(map[string]interface{}{
+				"type":    "error",
+				"message": "Invalid message format",
+			})
 			continue
 		}
 
-		msg, err := h.messageUC.Execute(context.Background(), chatID, userID, input.Text)
-		if err != nil {
-			log.Printf("Message processing failed: %v", err)
-			continue
-		}
+		switch input.Type {
+		case "message":
+			// Обработка нового сообщения
+			if input.Text == "" {
+				conn.WriteJSON(map[string]interface{}{
+					"type":    "error",
+					"message": "Message text is empty",
+				})
+				continue
+			}
 
-		h.broadcastMessage(chatID, msg)
+			msg, err := h.messageUC.Execute(context.Background(), chatID, userID, input.Text)
+			if err != nil {
+				log.Printf("Message processing failed: %v", err)
+				conn.WriteJSON(map[string]interface{}{
+					"type":    "error",
+					"message": "Failed to send message",
+				})
+				continue
+			}
+
+			// Добавляем логин отправителя
+			user, err := h.userRepo.GetUserByID(context.Background(), userID)
+			if err == nil && user != nil {
+				msg.Login = user.Login
+			}
+
+			// Рассылаем сообщение всем участникам чата
+			h.broadcastMessage(chatID, map[string]interface{}{
+				"type":    "message",
+				"message": msg,
+			})
+
+		default:
+			log.Printf("Unknown message type: %s", input.Type)
+			conn.WriteJSON(map[string]interface{}{
+				"type":    "error",
+				"message": "Unknown message type",
+			})
+		}
 	}
 }
 
-func (h *WSHandler) broadcastMessage(chatID string, msg *models.Message) {
+func (h *WSHandler) broadcastMessage(chatID string, msg interface{}) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -223,6 +305,8 @@ func (h *WSHandler) broadcastMessage(chatID string, msg *models.Message) {
 	for conn := range conns {
 		if err := conn.WriteJSON(msg); err != nil {
 			log.Printf("Broadcast failed: %v", err)
+			conn.Close()
+			delete(conns, conn)
 		}
 	}
 }

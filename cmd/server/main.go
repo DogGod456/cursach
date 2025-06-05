@@ -72,6 +72,7 @@ func main() {
 		jwtSecret,
 		tokenRepo,
 		chatRepo,
+		userRepo,
 		messageRepo,
 		messageUC,
 	)

@@ -39,6 +39,7 @@ func SetupRouter(
 	protected := r.PathPrefix("/api").Subrouter()
 	protected.Use(server.JWTAuthMiddleware(jwtSecret, tokenRepo))
 
+	r.HandleFunc("/ws/{chat_id}", wsHandler.Handle)
 	protected.Handle("/chats", chathandler.NewCreateHandler(chatCreator)).Methods("POST")
 	protected.Handle("/chats", chathandler.NewGetChatsHandler(chatLister)).Methods("GET")
 	protected.Handle("/chats/{chat_id}", chathandler.NewDeleteHandler(chatDeleter)).Methods("DELETE")
@@ -48,7 +49,6 @@ func SetupRouter(
 	protected.Handle("/logout", logoutHandler).Methods("POST")
 	protected.Handle("/users/search", userhandler.NewSearchUsersHandler(userSearcher)).Methods("GET")
 	protected.Handle("/users/login", userhandler.NewUpdateLoginHandler(loginUpdater)).Methods("PUT")
-	protected.HandleFunc("/ws/{chat_id}", wsHandler.Handle)
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
 
