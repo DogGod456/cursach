@@ -2,9 +2,10 @@ package user
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
-	"cursach/internal/server"
+	_ "cursach/internal/server"
 	"cursach/internal/usecase/user"
 	"github.com/gorilla/mux"
 )
@@ -24,31 +25,40 @@ func NewDeleteHandler(useCase *user.UserDeleter) *DeleteHandler {
 // Параметры: user_id в URL, текущий user_id из контекста JWT
 // Возвращает: HTTP статус 204 при успехе или сообщение об ошибке
 func (h *DeleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Println("correct")
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Only DELETE method is allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	vars := mux.Vars(r)
-	userID := vars["user_id"]
-
-	// Получаем currentUserID из контекста (установлено в JWT middleware)
-	currentUserID, ok := r.Context().Value(server.UserIDKey).(string)
+	// Получаем currentUserID из контекста
+	currentUserID, ok := r.Context().Value("user_id").(string)
 	if !ok || currentUserID == "" {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
 
-	if userID == "" {
-		http.Error(w, "Missing user_id parameter", http.StatusBadRequest)
+	vars := mux.Vars(r)
+	requestedUserID := vars["user_id"]
+	log.Println("delete", requestedUserID)
+	log.Println("delete", currentUserID)
+
+	// Определяем ID пользователя для удаления
+	userIDToDelete := requestedUserID
+	if requestedUserID == "me" {
+		userIDToDelete = currentUserID
+	}
+
+	// Проверяем права доступа (ТОЛЬКО ЗДЕСЬ)
+	if currentUserID != userIDToDelete {
+		http.Error(w, "You can only delete your own account", http.StatusForbidden)
 		return
 	}
 
-	err := h.useCase.Execute(r.Context(), userID, currentUserID)
+	// Выполняем удаление (передаем ТОЛЬКО userIDToDelete)
+	err := h.useCase.Execute(r.Context(), userIDToDelete)
 	if err != nil {
 		switch {
-		case errors.Is(err, user.ErrForbidden):
-			http.Error(w, err.Error(), http.StatusForbidden)
 		case errors.Is(err, user.ErrUserNotFound):
 			http.Error(w, err.Error(), http.StatusNotFound)
 		default:

@@ -33,25 +33,22 @@ func NewChatCreator(
 
 // Execute создает новый чат с указанными пользователями
 // Возвращает ID созданного чата или ошибку
-func (uc *ChatCreator) Execute(ctx context.Context, userIDs []string) (string, error) {
-	// Проверка минимального количества пользователей
-	if len(userIDs) == 0 {
-		return "", ErrEmptyUsers
+func (uc *ChatCreator) Execute(ctx context.Context, currentUserID, targetUserLogin string) (string, error) {
+	targetUser, err := uc.userRepo.GetUserByLogin(ctx, targetUserLogin)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user by login: %w", err)
+	}
+	if targetUser == nil {
+		return "", ErrUserNotFound
 	}
 
-	// Проверка существования всех пользователей
-	for _, userID := range userIDs {
-		exists, err := uc.userRepo.UserExists(ctx, userID)
-		if err != nil {
-			return "", fmt.Errorf("%w: %v", ErrUserCheckFailed, err)
-		}
-		if !exists {
-			return "", fmt.Errorf("%w: user ID %s", ErrUserNotFound, userID)
-		}
+	// Проверяем, что пользователи разные
+	if currentUserID == targetUser.ID {
+		return "", errors.New("cannot create chat with yourself")
 	}
 
-	// Создание чата с пользователями
-	chatID, err := uc.chatRepo.CreateChatWithUsers(ctx, userIDs...)
+	// Создаем чат с двумя участниками (без проверки существующих чатов)
+	chatID, err := uc.chatRepo.CreateChat(ctx, []string{currentUserID, targetUser.ID})
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrChatCreation, err)
 	}

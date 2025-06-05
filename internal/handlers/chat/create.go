@@ -9,33 +9,33 @@ import (
 	"cursach/internal/usecase/chat"
 )
 
-// CreateHandler обрабатывает HTTP запросы для создания новых чатов
 type CreateHandler struct {
 	useCase *chat.ChatCreator
 }
 
-// NewCreateHandler создает новый экземпляр CreateHandler
 func NewCreateHandler(useCase *chat.ChatCreator) *CreateHandler {
 	return &CreateHandler{useCase: useCase}
 }
 
-// CreateRequest представляет структуру запроса на создание чата
+// Изменяем структуру запроса
 type CreateRequest struct {
-	UserIDs []string `json:"user_ids"`
+	UserLogin string `json:"userLogin"` // Теперь принимаем логин пользователя
 }
 
-// CreateResponse представляет структуру ответа после создания чата
 type CreateResponse struct {
 	ChatID string `json:"chat_id"`
 }
 
-// ServeHTTP обрабатывает HTTP запрос для создания нового чата
-// Метод: POST
-// Параметры: JSON с массивом user_ids
-// Возвращает: JSON с chat_id или сообщение об ошибке
 func (h *CreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получаем ID текущего пользователя из контекста
+	currentUserID, ok := r.Context().Value("user_id").(string)
+	if !ok || currentUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -45,16 +45,16 @@ func (h *CreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chatID, err := h.useCase.Execute(r.Context(), req.UserIDs)
+	// Передаем ID текущего пользователя и логин целевого пользователя
+	chatID, err := h.useCase.Execute(r.Context(), currentUserID, req.UserLogin)
 	if err != nil {
 		switch {
-		case errors.Is(err, chat.ErrEmptyUsers),
-			errors.Is(err, chat.ErrUserNotFound):
+		case errors.Is(err, chat.ErrUserNotFound):
 			http.Error(w, err.Error(), http.StatusBadRequest)
-		case errors.Is(err, chat.ErrUserCheckFailed),
-			errors.Is(err, chat.ErrChatCreation):
+		case errors.Is(err, chat.ErrChatCreation):
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		default:
+			log.Printf("Create chat error: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 		}
 		return

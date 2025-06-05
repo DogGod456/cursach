@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Список контактов</title>
+</head>
+<body>
+<h1 id="username">Имя пользователя</h1>
+<button id="editLoginBtn">Изменить имя</button>
+<button id="createChatBtn">Создать чат</button>
+<button id="logoutBtn">Выход</button>
+<button id="deleteAccountBtn">Удалить аккаунт</button>
+
+<h2>Чаты</h2>
+<ul id="chatList"></ul>
+
+<script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login.html';
+    }
+
+    async function loadUser() {
+        const res = await fetch('/api/user', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (res.ok) {
+            const user = await res.json();
+            document.getElementById('username').textContent = user.login;
+
+            // Отображаем чаты
+            const list = document.getElementById('chatList');
+            list.innerHTML = '';
+
+            user.chats.forEach(chat => {
+                const li = document.createElement('li');
+                li.textContent = chat.name + ' ';
+
+                const delBtn = document.createElement('button');
+                delBtn.textContent = 'Удалить';
+                delBtn.onclick = () => {
+                    localStorage.setItem('chatToDelete', chat.id);
+                    window.location.href = '/confirm_delete_chat.html';
+                };
+
+                li.appendChild(delBtn);
+                list.appendChild(li);
+            });
+        } else {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+    }
+
+    document.getElementById('editLoginBtn').onclick = () => window.location.href = '/edit_login.html';
+    document.getElementById('createChatBtn').onclick = () => window.location.href = '/create_chat.html';
+    document.getElementById('logoutBtn').onclick = async () => {
+        await fetch('/api/logout', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+    };
+    document.getElementById('deleteAccountBtn').onclick = () => window.location.href = '/confirm_delete_account.html';
+
+    loadUser();
+</script>
+</body>
+</html>

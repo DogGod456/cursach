@@ -2,9 +2,9 @@ package chat
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
-	"cursach/internal/server"
 	"cursach/internal/usecase/chat"
 	"github.com/gorilla/mux"
 )
@@ -20,9 +20,6 @@ func NewDeleteHandler(useCase *chat.ChatDeleter) *DeleteHandler {
 }
 
 // ServeHTTP обрабатывает HTTP запрос для удаления чата
-// Метод: DELETE
-// Параметры: chat_id в URL, user_id из контекста JWT
-// Возвращает: HTTP статус 204 при успехе или сообщение об ошибке
 func (h *DeleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Only DELETE method is allowed", http.StatusMethodNotAllowed)
@@ -30,10 +27,11 @@ func (h *DeleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vars := mux.Vars(r)
+	log.Println(vars)
 	chatID := vars["chat_id"]
 
 	// Получаем userID из контекста (установлено в JWT middleware)
-	userID, ok := r.Context().Value(server.UserIDKey).(string)
+	userID, ok := r.Context().Value("user_id").(string)
 	if !ok || userID == "" {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
@@ -43,7 +41,7 @@ func (h *DeleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing chat_id parameter", http.StatusBadRequest)
 		return
 	}
-
+	log.Println(chatID)
 	err := h.useCase.Execute(r.Context(), chatID, userID)
 	if err != nil {
 		switch {

@@ -58,8 +58,10 @@ func main() {
 	// Инициализация use cases
 	chatCreator := chat.NewChatCreator(chatRepo, userRepo)
 	chatDeleter := chat.NewChatDeleter(chatRepo)
+	chatLister := chat.NewChatLister(chatRepo)
 	userManager := user.NewUserManager(userRepo, salt)
 	userDeleter := user.NewUserDeleter(userRepo)
+	userSearcher := user.NewUserSearcher(userRepo)
 	authUC := user.NewAuthenticator(userRepo, salt)
 	logoutUC := user.NewLogouter(tokenRepo)
 	loginUpdater := user.NewLoginUpdater(userRepo)
@@ -86,6 +88,8 @@ func main() {
 		logoutUC,
 		loginUpdater,
 		wsHandler,
+		chatLister,
+		userSearcher,
 	)
 
 	// Запуск сервера

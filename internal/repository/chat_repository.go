@@ -6,12 +6,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 )
 
 // ChatRepository определяет интерфейс для работы с чатами
 type ChatRepository interface {
 	// CreateChat создает новый чат и возвращает его ID
-	CreateChat(ctx context.Context) (string, error)
+	CreateChat(ctx context.Context, userIDs []string) (string, error)
 
 	// DeleteChat удаляет чат по указанному ID
 	DeleteChat(ctx context.Context, chatID string) error
@@ -31,6 +32,8 @@ type ChatRepository interface {
 
 	// CreateChatWithUsers создает новый чат и добавляет в него указанных пользователей
 	CreateChatWithUsers(ctx context.Context, userIDs ...string) (string, error)
+
+	GetUserChats(ctx context.Context, userID string) ([]*models.ChatWithUser, error)
 }
 
 // chatRepository реализует интерфейс ChatRepository
@@ -43,12 +46,42 @@ func NewChatRepository(db *sql.DB) ChatRepository {
 	return &chatRepository{db: db}
 }
 
-func (r *chatRepository) CreateChat(ctx context.Context) (string, error) {
+func (r *chatRepository) CreateChat(ctx context.Context, userIDs []string) (string, error) {
+	if len(userIDs) == 0 {
+		return "", errors.New("at least one user is required")
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+
+	// Создаем чат
 	var chatID string
-	err := r.db.QueryRowContext(ctx,
+	err = tx.QueryRowContext(ctx,
 		`INSERT INTO chats DEFAULT VALUES RETURNING id_chat`,
 	).Scan(&chatID)
-	return chatID, err
+	if err != nil {
+		return "", fmt.Errorf("failed to create chat: %w", err)
+	}
+
+	// Добавляем пользователей в чат
+	for _, userID := range userIDs {
+		_, err = tx.ExecContext(ctx,
+			`INSERT INTO chat_users (id_chat, id_user) VALUES ($1, $2)`,
+			chatID, userID,
+		)
+		if err != nil {
+			return "", fmt.Errorf("failed to add user to chat: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return "", fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return chatID, nil
 }
 
 func (r *chatRepository) DeleteChat(ctx context.Context, chatID string) error {
@@ -144,6 +177,7 @@ func (r *chatRepository) GetChatUsers(ctx context.Context, chatID string) ([]mod
 
 func (r *chatRepository) IsUserInChat(ctx context.Context, chatID, userID string) (bool, error) {
 	var exists bool
+	log.Println(chatID, userID, "is user in chat")
 	err := r.db.QueryRowContext(ctx,
 		`SELECT EXISTS(
             SELECT 1 FROM chat_users 
@@ -188,4 +222,47 @@ func (r *chatRepository) CreateChatWithUsers(ctx context.Context, userIDs ...str
 		return "", err
 	}
 	return chatID, nil
+}
+
+func (r *chatRepository) GetUserChats(ctx context.Context, userID string) ([]*models.ChatWithUser, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT 
+            c.id_chat, 
+            c.created_at, 
+            c.updated_at,
+            u.id_user,
+            u.login
+        FROM chats c
+        JOIN chat_users uc ON c.id_chat = uc.id_chat
+        JOIN users u ON uc.id_user = u.id_user
+        WHERE uc.id_user != $1 AND c.id_chat IN (
+            SELECT id_chat FROM chat_users WHERE id_user = $1
+        )`,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user chats: %w", err)
+	}
+	defer rows.Close()
+
+	var chats []*models.ChatWithUser
+	for rows.Next() {
+		var chat models.ChatWithUser
+		if err := rows.Scan(
+			&chat.Chat.ID,
+			&chat.Chat.CreatedAt,
+			&chat.Chat.UpdatedAt,
+			&chat.User.ID,
+			&chat.User.Login,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan chat: %w", err)
+		}
+		chats = append(chats, &chat)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return chats, nil
 }

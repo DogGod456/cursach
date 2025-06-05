@@ -5,7 +5,6 @@ import (
 	"cursach/internal/repository"
 	"errors"
 	"fmt"
-	"log"
 )
 
 var (
@@ -23,15 +22,8 @@ func NewUserDeleter(userRepo repository.UserRepository) *UserDeleter {
 	return &UserDeleter{userRepo: userRepo}
 }
 
-// Execute удаляет пользователя по ID
-// Только пользователь может удалить себя
-func (uc *UserDeleter) Execute(ctx context.Context, userID, currentUserID string) error {
-	// Проверка прав доступа
-	if userID != currentUserID {
-		log.Println(userID, currentUserID)
-		return ErrForbidden
-	}
-
+// Execute удаляет пользователя по ID (без проверки прав)
+func (uc *UserDeleter) Execute(ctx context.Context, userID string) error {
 	// Проверка существования пользователя
 	exists, err := uc.userRepo.UserExists(ctx, userID)
 	if err != nil {

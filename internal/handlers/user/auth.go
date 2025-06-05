@@ -43,7 +43,6 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Исправлено: конфликт имен (user -> authUser)
 	authUser, err := h.authUC.Authenticate(r.Context(), req.Login, req.Password)
 	if err != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)

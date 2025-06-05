@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head><meta charset="UTF-8"><title>Удалить чат</title></head>
+<body>
+<h1>Удалить чат?</h1>
+<button id="yesBtn">ДА</button>
+<button id="noBtn">НЕТ</button>
+
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) window.location.href = '/login.html';
+
+  const chatId = localStorage.getItem('chatToDelete');
+  if (!chatId) window.location.href = '/contacts.html';
+
+  document.getElementById('yesBtn').onclick = async () => {
+    await fetch('/api/chats/' + chatId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    localStorage.removeItem('chatToDelete');
+    window.location.href = '/contacts.html';
+  };
+
+  document.getElementById('noBtn').onclick = () => {
+    localStorage.removeItem('chatToDelete');
+    window.location.href = '/contacts.html';
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <title>Вход</title>
+</head>
+<body>
+<h1>Вход</h1>
+<form id="loginForm">
+    <input id="login" type="text" placeholder="Логин" required />
+    <input id="password" type="password" placeholder="Пароль" required />
+    <button type="submit">Войти</button>
+</form>
+<div id="result" style="color: red; margin-top: 10px;"></div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+        e.preventDefault();
+
+        const login = e.target.login.value.trim();
+        const password = e.target.password.value;
+        const role = 'user';
+
+        try {
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ login, password, role })
+            });
+
+            if (!response.ok) {
+                throw new Error('Ошибка входа: неверный логин или пароль');
+            }
+
+            const data = await response.json();
+
+            // Сохраняем токен под ключом "token"
+            localStorage.setItem('token', data.token);
+
+            // Перенаправляем на страницу со списком контактов
+            window.location.href = '/contacts.html';
+        } catch (error) {
+            document.getElementById('result').textContent = error.message;
+        }
+    });
+</script>
+</body>
+</html>

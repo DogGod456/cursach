@@ -5,6 +5,7 @@ import (
 	"cursach/internal/repository"
 	"errors"
 	"fmt"
+	"log"
 )
 
 var (
@@ -27,6 +28,7 @@ func NewChatDeleter(chatRepo repository.ChatRepository) *ChatDeleter {
 func (uc *ChatDeleter) Execute(ctx context.Context, chatID, userID string) error {
 	// Проверяем, что пользователь является участником чата
 	isMember, err := uc.chatRepo.IsUserInChat(ctx, chatID, userID)
+	log.Println(isMember, err)
 	if err != nil {
 		return fmt.Errorf("failed to check user membership: %w", err)
 	}

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 )
 
 // UserRepository определяет интерфейс для работы с пользователями системы
@@ -33,6 +34,8 @@ type UserRepository interface {
 
 	// UpdateLogin обновляет логин пользователя
 	UpdateLogin(ctx context.Context, userID, newLogin string) error
+
+	SearchUsersByLogin(ctx context.Context, login string) ([]*models.User, error)
 }
 
 // userRepository реализует интерфейс UserRepository
@@ -82,6 +85,77 @@ func (r *userRepository) GetUserByID(ctx context.Context, userID string) (*model
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by ID: %w", err)
 	}
+
+	// Запрос для получения личных чатов с собеседниками
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT 
+			c.id_chat, 
+			c.created_at AS chat_created_at,
+			c.updated_at AS chat_updated_at,
+			u.id_user AS other_user_id, 
+			u.login AS other_user_login, 
+			u.role AS other_user_role, 
+			u.created_at AS other_user_created_at, 
+			u.updated_at AS other_user_updated_at
+		FROM chats c
+		JOIN chat_users cu1 ON c.id_chat = cu1.id_chat
+		JOIN chat_users cu2 
+			ON c.id_chat = cu2.id_chat 
+			AND cu2.id_user != cu1.id_user
+		JOIN users u ON u.id_user = cu2.id_user
+		WHERE cu1.id_user = $1
+			AND c.id_chat IN (
+				SELECT id_chat 
+				FROM chat_users 
+				GROUP BY id_chat 
+				HAVING COUNT(*) = 2
+			)`,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user chats: %w", err)
+	}
+	defer rows.Close()
+
+	var chats []models.ChatWithUser
+	for rows.Next() {
+		var chat models.Chat
+		var otherUser models.User
+		var chatUpdatedAt, userUpdatedAt sql.NullTime
+
+		err := rows.Scan(
+			&chat.ID,
+			&chat.CreatedAt,
+			&chatUpdatedAt,
+			&otherUser.ID,
+			&otherUser.Login,
+			&otherUser.Role,
+			&otherUser.CreatedAt,
+			&userUpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan chat row: %w", err)
+		}
+
+		// Обработка NULL значений для времени обновления
+		if chatUpdatedAt.Valid {
+			chat.UpdatedAt = chatUpdatedAt
+		}
+		if userUpdatedAt.Valid {
+			otherUser.UpdatedAt = userUpdatedAt
+		}
+
+		chats = append(chats, models.ChatWithUser{
+			Chat: chat,
+			User: otherUser,
+		})
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	user.Chats = chats
+	log.Println("чаты", chats)
 	return &user, nil
 }
 
@@ -179,4 +253,38 @@ func (r *userRepository) UpdateLogin(ctx context.Context, userID, newLogin strin
 		return fmt.Errorf("failed to update user login: %w", err)
 	}
 	return nil
+}
+
+func (r *userRepository) SearchUsersByLogin(ctx context.Context, login string) ([]*models.User, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id_user, login, role, created_at, updated_at
+		FROM users
+		WHERE login LIKE $1 || '%'`,
+		login,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search users by login: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		var user models.User
+		if err := rows.Scan(
+			&user.ID,
+			&user.Login,
+			&user.Role,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return users, nil
 }

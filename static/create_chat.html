@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head><meta charset="UTF-8"><title>Создать чат</title></head>
+<body>
+<h1>Создать чат</h1>
+<form id="createChatForm">
+  <input id="chatUserLogin" type="text" placeholder="Логин пользователя" required>
+  <button type="submit">Создать чат</button>
+</form>
+<div id="result"></div>
+
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) window.location.href = '/login.html';
+
+  document.getElementById('createChatForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const login = e.target.chatUserLogin.value;
+
+    try {
+      const res = await fetch('/api/chats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ userLogin: login })
+      });
+      if (!res.ok) throw new Error('Ошибка создания чата');
+      document.getElementById('result').textContent = 'Чат создан';
+      setTimeout(() => window.location.href = '/contacts.html', 1000);
+    } catch (err) {
+      document.getElementById('result').textContent = err.message;
+    }
+  });
+</script>
+</body>
+</html>

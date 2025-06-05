@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 
-	"cursach/internal/server"
 	"cursach/internal/usecase/user"
 )
 
@@ -28,7 +27,7 @@ func (h *UpdateLoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получаем текущего пользователя из контекста
-	currentUserID, ok := r.Context().Value(server.UserIDKey).(string)
+	currentUserID, ok := r.Context().Value("user_id").(string)
 	if !ok || currentUserID == "" {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
