@@ -19,12 +19,14 @@ type Config struct {
 }
 
 type DatabaseConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host          string `yaml:"host"`
+	Port          int    `yaml:"port"`
+	User          string `yaml:"user"`           // Для обычных операций
+	Password      string `yaml:"password"`       // Для обычных операций
+	AdminUser     string `yaml:"admin_user"`     // Для админских операций
+	AdminPassword string `yaml:"admin_password"` // Для админских операций
+	DBName        string `yaml:"dbname"`
+	SSLMode       string `yaml:"sslmode"`
 }
 
 type AuthConfig struct {
@@ -59,6 +61,15 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("%w: %s", err, "PGPASSWORD")
 	}
 
+	adminUser, err := getEnv("PGADMIN_USER")
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", err, "PGADMIN_USER")
+	}
+	adminPassword, err := getEnv("PGADMIN_PASSWORD")
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", err, "PGADMIN_PASSWORD")
+	}
+
 	dbName, err := getEnv("PGDATABASE")
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", err, "PGDATABASE")
@@ -90,12 +101,14 @@ func LoadConfig() (*Config, error) {
 
 	return &Config{
 		Database: DatabaseConfig{
-			Host:     host,
-			Port:     port,
-			User:     user,
-			Password: password,
-			DBName:   dbName,
-			SSLMode:  sslMode,
+			Host:          host,
+			Port:          port,
+			User:          user,
+			Password:      password,
+			AdminUser:     adminUser,
+			AdminPassword: adminPassword,
+			DBName:        dbName,
+			SSLMode:       sslMode,
 		},
 		Auth: AuthConfig{
 			Salt:      salt,

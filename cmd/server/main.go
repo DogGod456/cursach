@@ -26,30 +26,35 @@ func main() {
 	}
 
 	// Подключение к базе данных
-	db, err := database.New(cfg.Database)
+	adminDB, err := database.New(cfg.Database, true)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Admin DB connection failed: %v", err)
+	}
+	defer adminDB.Close()
+
+	if err := adminDB.InitSchema(); err != nil {
+		log.Fatalf("Schema initialization failed: %v", err)
 	}
 
-	defer func(db *database.DB) {
-		err := db.Close()
-		if err != nil {
-			log.Fatalf("Failed to close database connection: %v", err)
-		}
-	}(db)
+	// Подключение для обычных операций
+	userDB, err := database.New(cfg.Database, false)
+	if err != nil {
+		log.Fatalf("User DB connection failed: %v", err)
+	}
+	defer userDB.Close()
 
 	log.Println("Database connection established")
 
 	// Инициализация схемы БД
-	if err := db.InitSchema(); err != nil {
+	if err := userDB.InitSchema(); err != nil {
 		log.Printf("Warning: schema initialization: %v", err)
 	}
 
 	// Инициализация репозиториев
-	chatRepo := repository.NewChatRepository(db.DB)
-	userRepo := repository.NewUserRepository(db.DB)
-	tokenRepo := repository.NewTokenRepository(db.DB)
-	messageRepo := repository.NewMessageRepository(db.DB)
+	chatRepo := repository.NewChatRepository(userDB.DB)
+	userRepo := repository.NewUserRepository(userDB.DB)
+	tokenRepo := repository.NewTokenRepository(userDB.DB)
+	messageRepo := repository.NewMessageRepository(adminDB.DB)
 
 	// Конфигурация аутентификации
 	salt := cfg.Auth.Salt

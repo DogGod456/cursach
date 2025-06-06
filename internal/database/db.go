@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/lib/pq"
 	"log"
@@ -16,12 +17,14 @@ import (
 // DB обертка над sql.DB для добавления методов
 type DB struct {
 	*sql.DB
+	IsAdmin bool
 }
 
 // New создает новое подключение к PostgreSQL
 // Принимает конфигурацию и возвращает *DB или ошибку
-func New(cfg config.DatabaseConfig) (*DB, error) {
+func New(cfg config.DatabaseConfig, isAdmin bool) (*DB, error) {
 	// Сначала проверяем существование базы данных
+	log.Print(cfg)
 	exists, err := databaseExists(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check database existence: %w", err)
@@ -36,23 +39,27 @@ func New(cfg config.DatabaseConfig) (*DB, error) {
 	}
 
 	// Формируем строку подключения
+	user := cfg.User
+	password := cfg.Password
+	if isAdmin {
+		user = cfg.AdminUser
+		password = cfg.AdminPassword
+	}
+	log.Printf("Using database %s with user %s and password %s", cfg.DBName, user, password)
 	connStr := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,
+		cfg.Host, cfg.Port, user, password, cfg.DBName, cfg.SSLMode,
 	)
 
-	// Открываем соединение с базой данных
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Настраиваем пул соединений
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	// Проверяем соединение с таймаутом 5 секунд
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -60,19 +67,22 @@ func New(cfg config.DatabaseConfig) (*DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	log.Println("Connected to PostgreSQL database")
-	return &DB{db}, nil
+	log.Printf("Connected to PostgreSQL as %s", user)
+	return &DB{db, isAdmin}, nil
 }
 
 // InitSchema инициализирует схему базы данных
 func (db *DB) InitSchema() error {
+	if !db.IsAdmin {
+		return errors.New("schema initialization requires admin privileges")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	// Выполняем SQL-скрипт создания схемы
 	_, err := db.ExecContext(ctx, Schema)
 	if err != nil {
-		return fmt.Errorf("failed to init schema: %w", err)
+		log.Printf("Failed to initialize schema: %v", err)
 	}
 
 	log.Println("Database schema initialized")

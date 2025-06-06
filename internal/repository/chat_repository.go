@@ -33,6 +33,7 @@ type ChatRepository interface {
 	// CreateChatWithUsers создает новый чат и добавляет в него указанных пользователей
 	CreateChatWithUsers(ctx context.Context, userIDs ...string) (string, error)
 
+	// GetUserChats получение чатов пользователя
 	GetUserChats(ctx context.Context, userID string) ([]*models.ChatWithUser, error)
 }
 

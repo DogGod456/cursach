@@ -35,6 +35,7 @@ type UserRepository interface {
 	// UpdateLogin обновляет логин пользователя
 	UpdateLogin(ctx context.Context, userID, newLogin string) error
 
+	// SearchUsersByLogin ищет и получает модель пользователя по его ID
 	SearchUsersByLogin(ctx context.Context, login string) ([]*models.User, error)
 }
 

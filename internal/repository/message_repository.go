@@ -18,10 +18,10 @@ type MessageRepository interface {
 	// GetByChat возвращает сообщения для указанного чата
 	GetByChat(ctx context.Context, chatID string, limit int) ([]*models.Message, error)
 
-	// Update обновляет текст сообщения
+	// Update обновляет текст сообщения - не используется, возможно в дальнейшем при развитии проекта
 	Update(ctx context.Context, messageID, newText string) error
 
-	// Delete удаляет сообщение по ID
+	// Delete удаляет сообщение по ID - не используется, возможно в дальнейшем при развитии проекта
 	Delete(ctx context.Context, messageID string) error
 }
 
