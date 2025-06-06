@@ -23,6 +23,12 @@ func (h *LogoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID header not set", http.StatusBadRequest)
+	}
+	log.Println("Logout", userID)
+
 	// Извлекаем токен из заголовка Authorization
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -38,7 +44,7 @@ func (h *LogoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	token := tokenParts[1]
 
 	// Инвалидируем токен
-	err := h.logoutUC.Logout(r.Context(), token)
+	err := h.logoutUC.Logout(r.Context(), token, userID)
 	if err != nil {
 		http.Error(w, "Failed to logout", http.StatusInternalServerError)
 		return

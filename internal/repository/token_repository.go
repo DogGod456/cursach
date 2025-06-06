@@ -8,7 +8,7 @@ import (
 
 // TokenRepository определяет интерфейс для работы с токенами
 type TokenRepository interface {
-	RevokeToken(ctx context.Context, token string) error
+	RevokeToken(ctx context.Context, token, userID string) error
 	IsTokenRevoked(ctx context.Context, token string) (bool, error)
 }
 
@@ -20,11 +20,12 @@ func NewTokenRepository(db *sql.DB) TokenRepository {
 	return &tokenRepository{db: db}
 }
 
-func (r *tokenRepository) RevokeToken(ctx context.Context, token string) error {
+func (r *tokenRepository) RevokeToken(ctx context.Context, token, userID string) error {
 	//noinspection SqlNoDataSourceInspection
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO revoked_tokens (token) VALUES ($1)`,
+		`INSERT INTO revoked_tokens (token, id_user) VALUES ($1, $2)`,
 		token,
+		userID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to revoke token: %w", err)

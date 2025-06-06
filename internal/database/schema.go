@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS chats (
     updated_at TIMESTAMPTZ
 );
 
--- Таблица участников чата (связь между чатами и пользователями)
+-- Таблица участников чата
 CREATE TABLE IF NOT EXISTS chat_users (
     id_chat_user UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     id_chat UUID NOT NULL,
@@ -33,18 +33,17 @@ CREATE TABLE IF NOT EXISTS chat_users (
 CREATE TABLE IF NOT EXISTS messages (
     id_message UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     id_chat UUID NOT NULL,
-    id_user UUID NOT NULL,  -- отправитель
+    id_user UUID NOT NULL,
     message_text TEXT NOT NULL,
-    id_reply_message UUID,  -- ответ на сообщение ЭТОГО НЕ БУДЕТ
-    draft BOOLEAN NOT NULL DEFAULT FALSE, -- ЭТОГО ТОЖЕ
     sending_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ
 );
 
--- Таблица для отозванных токенов
+-- Таблица для отозванных токенов (ОБНОВЛЕНО)
 CREATE TABLE IF NOT EXISTS revoked_tokens (
     id_revoked_token UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     token TEXT NOT NULL UNIQUE,
+    id_user UUID NOT NULL,  -- Ссылка на пользователя
     revoked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -55,8 +54,9 @@ CREATE INDEX idx_messages_chat ON messages(id_chat);
 CREATE INDEX idx_messages_sender ON messages(id_user);
 CREATE INDEX idx_messages_time ON messages(sending_time);
 CREATE INDEX idx_revoked_tokens_token ON revoked_tokens(token);
+CREATE INDEX idx_revoked_tokens_user ON revoked_tokens(id_user);  -- Новый индекс
 
--- Внешние ключи (все связи описаны после создания таблиц)
+-- Внешние ключи
 ALTER TABLE chat_users 
 ADD CONSTRAINT fk_chat_users_chat 
 FOREIGN KEY (id_chat) REFERENCES chats(id_chat) ON DELETE CASCADE;
@@ -73,8 +73,9 @@ ALTER TABLE messages
 ADD CONSTRAINT fk_messages_user 
 FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE;
 
-ALTER TABLE messages 
-ADD CONSTRAINT fk_messages_reply 
-FOREIGN KEY (id_reply_message) REFERENCES messages(id_message) ON DELETE SET NULL;
+-- Новая связь для отозванных токенов
+ALTER TABLE revoked_tokens 
+ADD CONSTRAINT fk_revoked_tokens_user 
+FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE;
 
 `

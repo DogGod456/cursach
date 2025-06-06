@@ -14,6 +14,6 @@ func NewLogouter(tokenRepo repository.TokenRepository) *Logouter {
 	return &Logouter{tokenRepo: tokenRepo}
 }
 
-func (uc *Logouter) Logout(ctx context.Context, token string) error {
-	return uc.tokenRepo.RevokeToken(ctx, token)
+func (uc *Logouter) Logout(ctx context.Context, token, userID string) error {
+	return uc.tokenRepo.RevokeToken(ctx, token, userID)
 }
