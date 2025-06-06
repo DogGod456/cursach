@@ -13,28 +13,32 @@ var (
 	ErrWithEnv = errors.New("environment variable error")
 )
 
+// Config - корневая структура конфигурации приложения
 type Config struct {
 	Database DatabaseConfig
 	Auth     AuthConfig
 }
 
+// DatabaseConfig - параметры подключения к БД
 type DatabaseConfig struct {
 	Host          string `yaml:"host"`
 	Port          int    `yaml:"port"`
-	User          string `yaml:"user"`           // Для обычных операций
-	Password      string `yaml:"password"`       // Для обычных операций
-	AdminUser     string `yaml:"admin_user"`     // Для админских операций
-	AdminPassword string `yaml:"admin_password"` // Для админских операций
+	User          string `yaml:"user"`
+	Password      string `yaml:"password"`
+	AdminUser     string `yaml:"admin_user"`
+	AdminPassword string `yaml:"admin_password"`
 	DBName        string `yaml:"dbname"`
 	SSLMode       string `yaml:"sslmode"`
 }
 
+// AuthConfig - параметры аутентификации
 type AuthConfig struct {
 	Salt      string
 	JWTSecret string
 	JWTExpiry time.Duration
 }
 
+// LoadConfig - загрузка конфигурации из переменных окружения
 func LoadConfig() (*Config, error) {
 	// Получаем все переменные окружения с проверкой ошибок
 	host, err := getEnv("PGHOST")

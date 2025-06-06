@@ -24,16 +24,6 @@ func NewAuthenticator(userRepo repository.UserRepository, salt string) *Authenti
 }
 
 // Authenticate выполняет аутентификацию пользователя по логину и паролю
-// Действия:
-//  1. Ищет пользователя по логину через репозиторий
-//  2. Если пользователь не найден - возвращает ErrInvalidCredentials
-//  3. Проверяет соответствие пароля с использованием соли
-//  4. При несовпадении паролей возвращает ErrInvalidCredentials
-//  5. При успешной проверке возвращает объект пользователя
-//
-// Возвращает:
-//   - *models.User: объект аутентифицированного пользователя
-//   - error: ошибку аутентификации или ошибку базы данных
 func (uc *Authenticator) Authenticate(ctx context.Context, login, password string) (*models.User, error) {
 	user, err := uc.userRepo.GetUserByLogin(ctx, login)
 	if err != nil {

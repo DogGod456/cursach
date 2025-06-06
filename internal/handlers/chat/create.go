@@ -9,19 +9,22 @@ import (
 	"cursach/internal/usecase/chat"
 )
 
+// Обработчик создания чата
 type CreateHandler struct {
 	useCase *chat.ChatCreator
 }
 
+// Конструктор обработчика
 func NewCreateHandler(useCase *chat.ChatCreator) *CreateHandler {
 	return &CreateHandler{useCase: useCase}
 }
 
-// Изменяем структуру запроса
+// Запрос на создание чата
 type CreateRequest struct {
-	UserLogin string `json:"userLogin"` // Теперь принимаем логин пользователя
+	UserLogin string `json:"userLogin"` // Логин пользователя для чата
 }
 
+// Ответ при успешном создании
 type CreateResponse struct {
 	ChatID string `json:"chat_id"`
 }

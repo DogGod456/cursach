@@ -29,15 +29,6 @@ func NewUserManager(userRepo repository.UserRepository, salt string) *UserManage
 }
 
 // CreateOrGetUser создает нового пользователя или возвращает существующего
-// При создании:
-//   - Проверяет уникальность логина
-//   - Валидирует роль
-//   - Хеширует пароль с использованием соли
-//
-// При получении:
-//   - Проверяет пароль с помощью верификации хеша
-//
-// Возвращает идентификатор пользователя или ошибку
 func (uc *UserManager) CreateOrGetUser(ctx context.Context, login, password, role string) (string, error) {
 	// Валидация входных данных
 	if login == "" || password == "" {
