@@ -21,7 +21,7 @@ type DB struct {
 }
 
 // New создает новое подключение к PostgreSQL
-// Принимает конфигурацию и возвращает *DB или ошибку
+// Принимает конфигурацию и проверку админа и возвращает *DB или ошибку
 func New(cfg config.DatabaseConfig, isAdmin bool) (*DB, error) {
 	// Сначала проверяем существование базы данных
 	log.Print(cfg)
@@ -98,7 +98,7 @@ func (db *DB) Close() error {
 	return nil
 }
 
-// databaseExists проверяет существование базы данных
+// databaseExists проверяет существование базы данных (костыль)
 func databaseExists(cfg config.DatabaseConfig) (bool, error) {
 	// Подключаемся к системной базе данных
 	sysConnStr := fmt.Sprintf(

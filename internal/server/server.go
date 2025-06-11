@@ -34,7 +34,7 @@ func Start(handler http.Handler, address string) {
 		}
 	}()
 
-	// Ожидание сигнала завершения
+	// Ожидание сигнала завершения в канале
 	<-done
 	log.Println("Shutting down server...")
 

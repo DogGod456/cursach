@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-// SetupRouter создает и настраивает маршрутизатор HTTP
+// SetupRouter создает и настраивает маршрутизатор HTTP Вынести, надо посмотреть как сделат не больше 5 методов, посмотреть как через конфиг это организовать yaml
 func SetupRouter(
 	chatCreator *chatusecase.ChatCreator,
 	chatDeleter *chatusecase.ChatDeleter,

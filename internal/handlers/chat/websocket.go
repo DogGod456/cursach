@@ -35,10 +35,10 @@ type WSHandler struct {
 	jwtSecret   string
 	tokenRepo   repository.TokenRepository
 	chatRepo    repository.ChatRepository
-	userRepo    repository.UserRepository // Добавлен UserRepository
+	userRepo    repository.UserRepository
 	messageRepo repository.MessageRepository
 	messageUC   *message.Sender
-	connections map[string]map[*websocket.Conn]bool // chatID -> connections
+	connections map[string]map[*websocket.Conn]bool
 	mu          sync.Mutex
 }
 
@@ -46,7 +46,7 @@ func NewWSHandler(
 	jwtSecret string,
 	tokenRepo repository.TokenRepository,
 	chatRepo repository.ChatRepository,
-	userRepo repository.UserRepository, // Добавлен UserRepository
+	userRepo repository.UserRepository,
 	messageRepo repository.MessageRepository,
 	messageUC *message.Sender,
 ) *WSHandler {
@@ -78,10 +78,12 @@ func (h *WSHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(4001, "Auth failed"))
 		return
 	}
+	log.Println("claims", claims)
 
 	// Проверка доступа к чату
 	vars := mux.Vars(r)
 	chatID := vars["chat_id"]
+	log.Println("chatID", chatID)
 	if chatID == "" {
 		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(4002, "Chat ID not provided"))
 		return

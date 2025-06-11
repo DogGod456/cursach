@@ -93,7 +93,7 @@ func LoadConfig() (*Config, error) {
 		fmt.Println("WARNING: SSL is disabled - not recommended for production!")
 	}
 
-	salt := os.Getenv("AUTH_SALT")
+	salt := os.Getenv("AUTH_SALT") // Поменять на getnv
 	if salt == "" {
 		return nil, fmt.Errorf("AUTH_SALT is not set")
 	}
